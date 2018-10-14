@@ -36,11 +36,20 @@ func TestGetStatusMessageDefault(t *testing.T) {
 	}
 }
 
-func TestGetAddrDefault(t *testing.T) {
+func TestGetHostDefault(t *testing.T) {
 	clearEnv(t)
 
-	v := getAddr()
-	if v != "0.0.0.0:80" {
+	v := getHost()
+	if v != "0.0.0.0" {
+		t.Fail()
+	}
+}
+
+func TestGetPortDefault(t *testing.T) {
+	clearEnv(t)
+
+	v := getPort()
+	if v != 80 {
 		t.Fail()
 	}
 }

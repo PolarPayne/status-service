@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 	"net/http"
@@ -8,16 +9,34 @@ import (
 	"strconv"
 )
 
+const (
+	defaultHost       = "0.0.0.0"
+	defaultPort       = 80
+	defaultStatusCode = 200
+)
+
+var (
+	flagHost       = flag.String("host", defaultHost, "host to bind to")
+	flagPort       = flag.Int("port", defaultPort, "port to bind to")
+	flagStatusCode = flag.Int("code", defaultStatusCode, "status code that is returned to each request")
+	flagHelp       = flag.Bool("help", false, "print help message")
+)
+
 func getStatusCode() int {
+	var (
+		status int
+		err    error
+	)
+
 	v, ok := os.LookupEnv("STATUS_CODE")
 	if !ok {
-		log.Print("STATUS_CODE is not set, using 200")
-		return 200
-	}
-
-	status, err := strconv.Atoi(v)
-	if err != nil {
-		log.Panicf("STATUS_CODE is not a valid integer (was '%v')", v)
+		status = *flagStatusCode
+		log.Printf("STATUS_CODE is not set, using %v", status)
+	} else {
+		status, err = strconv.Atoi(v)
+		if err != nil {
+			log.Printf("STATUS_CODE is not a valid integer (was '%v')", v)
+		}
 	}
 
 	if !((status >= 200 && status <= 299) || (status >= 400 && status <= 499) || (status >= 500 && status <= 599)) {
@@ -38,23 +57,38 @@ func getStatusMessage(statusCode int) string {
 	return statusMessage
 }
 
-func getAddr() string {
+func getHost() string {
 	host, ok := os.LookupEnv("HOST")
 	if !ok {
-		log.Printf("HOST is not set, using 0.0.0.0")
-		host = "0.0.0.0"
+		log.Printf("HOST is not set, using %v", *flagHost)
+		return *flagHost
 	}
 
-	port, ok := os.LookupEnv("PORT")
+	return host
+}
+
+func getPort() int {
+	v, ok := os.LookupEnv("PORT")
 	if !ok {
-		log.Printf("PORT is not set, using 80")
-		port = "80"
+		log.Printf("PORT is not set, using %v", *flagPort)
+		return *flagPort
 	}
 
-	return net.JoinHostPort(host, port)
+	port, err := strconv.Atoi(v)
+	if err != nil {
+	}
+
+	return port
 }
 
 func main() {
+	flag.Parse()
+
+	if *flagHelp {
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
+
 	status := getStatusCode()
 	statusMessage := []byte(getStatusMessage(status))
 
@@ -66,7 +100,9 @@ func main() {
 		w.Write(statusMessage)
 	})
 
-	addr := getAddr()
+	host, port := getHost(), getPort()
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+
 	log.Printf("listening on %v", addr)
 
 	log.Fatal(http.ListenAndServe(addr, nil))
